@@ -35,10 +35,20 @@
       -webkit-tap-highlight-color: transparent;
     }
 
+    #countdown {
+      width: min(560px, 100%);
+      text-align: center;
+      font-size: clamp(0.95rem, 3.8vw, 1.05rem);
+      color: #880e4f;
+      margin-bottom: clamp(16px, 4vw, 28px);
+      line-height: 1.4;
+      padding: 0 8px;
+    }
+
     h1 {
       color: #c2185b;
       font-weight: 600;
-      margin-bottom: clamp(24px, 8vw, 48px);
+      margin-bottom: 10px;
       text-align: center;
       font-size: clamp(1.35rem, 5.5vw, 2rem);
       line-height: 1.35;
@@ -67,7 +77,7 @@
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
       touch-action: manipulation;
       min-height: 44px;
-      min-width: 44px;
+      min-width: 140px;
     }
 
     @media (max-width: 520px) {
@@ -151,7 +161,8 @@
       color: #666;
       border: 2px solid #ddd;
       z-index: 3;
-      transition: left 0.25s ease-out, top 0.25s ease-out, transform 0.25s ease-out;
+      box-sizing: border-box;
+      transition: left 0.25s ease-out, top 0.25s ease-out, box-shadow 0.2s ease;
     }
 
     #reject:hover {
@@ -218,6 +229,7 @@
 </head>
 <body>
   <h1>愿意和我在一起吗？</h1>
+  <p id="countdown" aria-live="polite"></p>
   <div class="btn-row" id="stage">
     <div id="agreeWrap">
       <button type="button" id="agree">同意 ❤</button>
@@ -230,9 +242,53 @@
       var agreeWrap = document.getElementById("agreeWrap");
       var reject = document.getElementById("reject");
       var stage = document.getElementById("stage");
+      var countdownEl = document.getElementById("countdown");
+
+      var AUTO_AGREE_SECONDS = 60;
+      var secondsLeft = AUTO_AGREE_SECONDS;
+      var layoutSwapped = false;
+      var countdownTimer = null;
 
       var rejectScale = 1;
       var minScale = 0.35;
+
+      function clearCountdown() {
+        if (countdownTimer != null) {
+          window.clearInterval(countdownTimer);
+          countdownTimer = null;
+        }
+      }
+
+      /** 槽位互换：拒绝始终用满尺寸（不套 scale），避免每秒换位时按钮被缩小 */
+      function applySlotLayout() {
+        rejectScale = 1;
+        var center = "50%";
+        var side = "15%";
+        var t = "translate(-50%, -50%)";
+
+        if (!layoutSwapped) {
+          agreeWrap.style.left = center;
+          agreeWrap.style.top = center;
+          agreeWrap.style.transform = t;
+          reject.style.left = side;
+          reject.style.top = center;
+          reject.style.transform = t;
+        } else {
+          agreeWrap.style.left = side;
+          agreeWrap.style.top = center;
+          agreeWrap.style.transform = t;
+          reject.style.left = center;
+          reject.style.top = center;
+          reject.style.transform = t;
+        }
+      }
+
+      function updateCountdownText() {
+        if (!countdownEl) return;
+        countdownEl.textContent =
+          secondsLeft +
+          " 秒内未拒绝将自动同意";
+      }
 
       function randomInRange(min, max) {
         return min + Math.random() * (max - min);
@@ -289,6 +345,8 @@
       });
 
       function onAgree() {
+        clearCountdown();
+
         var metaTheme = document.querySelector('meta[name="theme-color"]');
         if (metaTheme) metaTheme.setAttribute("content", "#e8f5e9");
 
@@ -321,6 +379,21 @@
       }
 
       agree.addEventListener("click", onAgree);
+
+      applySlotLayout();
+      updateCountdownText();
+
+      countdownTimer = window.setInterval(function () {
+        secondsLeft -= 1;
+        if (secondsLeft <= 0) {
+          clearCountdown();
+          onAgree();
+          return;
+        }
+        layoutSwapped = !layoutSwapped;
+        applySlotLayout();
+        updateCountdownText();
+      }, 1000);
     })();
   </script>
 </body>
